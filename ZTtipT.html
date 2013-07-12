@@ -1,0 +1,244 @@
+<html>
+
+ <meta charset="utf-8"> 
+
+<style>
+
+
+/* .cc { */
+/*   fill: #ddd;  fill: #bbb; */
+/* } */
+
+
+path {
+/*   fill: teal; */
+/*   fill: #ccc; */
+/*   stroke: #ccc; */
+  stroke: white;
+  stroke: #eee;
+  stroke-width: .25px;
+}
+
+
+path:hover {
+	fill: red;
+	opacity: 0.75;
+	}
+
+
+.boundary {
+  
+/*   stroke: #999;   */
+  stroke: grey;
+  stroke-linejoin: round;
+  stroke-width: 2px;
+ 
+}
+
+.mesh {
+  fill: none;
+/*   stroke: #fff; */
+  stroke: grey;
+  stroke-width: 0.5px;
+  stroke-linejoin: round;
+}
+
+.land-glow {
+  fill-opacity: .2;
+  filter: url(#blur);
+}
+
+
+
+.feature {
+/* 	fill: teal; */
+	fill: #bbb;
+/* 	fill: white; */
+	cursor: pointer;
+	}
+
+
+
+.feature.active {
+	fill: orange;
+	}
+
+path.active {
+	stroke-width: 0.1px;
+/* 	stroke: #808080; */
+	}
+
+
+
+text {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+/*   font-family: "monospace"; */
+  font-size: 2px;
+  text-anchor: middle;
+}
+
+
+rect {
+  fill: none;
+  pointer-events: all;
+  border: grey;
+}
+
+div.tooltip {
+  color: #222; 
+  background: #fff; 
+  padding: .5em; 
+  text-shadow: #f5f5f5 0 1px 0;
+  border-radius: 2px; 
+  box-shadow: 0px 0px 2px 0px #a6a6a6; 
+  opacity: 0.9; 
+  position: absolute;
+}
+
+
+
+
+</style>
+
+
+
+<body>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://d3js.org/topojson.v1.min.js"></script>
+<script src="http://d3js.org/queue.v1.min.js"></script>
+
+<script type="text/javascript">
+
+var width = 1430,
+    height = 1200,
+    active;
+    
+var W2 = screen.availWidth
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .style("margin-left", W2/2-width/2);
+
+
+var tooltip = d3.select("body").append("div")
+	.attr("class", "tooltip")
+	
+	
+
+var projection = d3.geo.albers()
+    .center([2, 55.4])
+    .rotate([4.4, 0])
+    .parallels([50, 60])
+//     .scale(750 * 5)
+    .scale(1100 * 5)
+    .translate([width / 2, height / 2]); 
+
+    
+
+var path = d3.geo.path()
+    .projection(projection);
+
+svg.append("rect")
+    .attr("width", width)
+    .attr("height", height)
+    .on("click", reset);
+    
+var g = svg.append("g");
+
+function list(ul, data) {
+  var li = ul.selectAll("li").data(data);
+  li.exit().remove();
+  li.enter().append("li");
+  li.text(function(d) { return d; });
+}
+
+d3.select("#list").call(list, [0, 1, 2, 3, 4]);
+
+
+
+
+
+d3.json("http://localhost:8888/Documents/Maps/UWard/WWW_topo.json", function(error, uk, names) {
+// d3.json("http://localhost:8888/Documents/Maps/UWard/CountyElect/CountyEl_topo.json", function(error, uk) {
+
+// 	CC = topojson.feature(uk, uk.objects.EWGS_ge).features;
+	CC = topojson.feature(uk, uk.objects.EWGS_ge);
+
+	
+
+	
+	g.selectAll("path")
+		.data(topojson.feature(uk, uk.objects.EWGS_ge).features)
+		.enter().append("path")
+			.attr("id", "land")
+			.attr("d", path)
+			.attr("class", "feature")
+			.attr("id", function (d) { console.log(d.properties.NAME)})
+			.on("click", click)
+			
+			.on("mousemove", function(d,i) {
+				var mouse = d3.mouse(svg.node()).map(function(d) {return parseInt(d); } );
+				tooltip
+					.classed("hidden", false)
+					.attr("style", "left:"+(mouse[0]+25)+"px; top:"+(mouse[1] - 50)+"px")
+					.html(d.properties.NAME)
+			})
+			.on("mouseout", function() {
+   	 			tooltip.style("opacity", 0)})
+		
+
+				
+// g.append("path")
+// 		.datum(topojson.mesh(uk, uk.objects.EWGS_ge, function(a, b) {return a ===b;}))
+// 		.attr("class", "mesh")
+// 		.attr("d", path);
+		
+// 	g.selectAll("text")
+//     	.data(CC.features)
+//  		.enter().append("text")
+//     	.attr("transform", function(d) { return "translate(" + path.centroid(d) + ")"; })
+//     	.attr("dy", ".30em")
+//     	.text(function(d) { return d.properties.NAME });
+
+
+function click(d) {
+	if (active === d) return reset();
+	g.selectAll(".active").classed("active", false);
+	d3.select(this).classed("active", active = d);
+	
+	var b = path.bounds(d);
+	g.transition().duration(750).attr("transform",
+		"translate("+projection.translate() + ")"
+		+ "scale(" + 0.40 / Math.max((b[1][0] - b[0][0]) / width, (b[1][1] - b[0][1]) / height) + ")"
+		+ "translate(" + -(b[1][0] +b[0][0])/ 2  + "," + -(b[1][1] + b[0][1]) / 2 + ")");
+	
+	console.log(d.properties.NAME)	
+	GG = b
+		
+		}
+});
+	
+function reset() {
+	g.selectAll(".active").classed("active", active = false);
+	g.transition().duration(750).attr("transform", "");
+	}
+
+
+
+d3.select(self.frameElement).style("height", height + "px");
+// d3.json("http://localhost:8888/Documents/Maps/Elect.geojson", function(error, topology) {
+// 	console.log(topology);
+// 	})
+
+</script>
+
+
+
+
+
+
+
+</html>
+
+
